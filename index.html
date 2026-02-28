@@ -3,1394 +3,370 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RESILIENT-FLOW | AI Supply Chain Auditor</title>
+    <title>Compliance Flow AI | Supply Chain Auditor</title>
     
-    <!-- Leaflet CSS for our interactive map -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Google Fonts: Inter for UI, JetBrains Mono for data -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono&display=swap" rel="stylesheet">
     
     <style>
-        /* --- Design System Variables --- */
+        /* --- BRAND DESIGN SYSTEM --- */
         :root {
-            --bg: #f1f5f9;
-            --card-bg: #ffffff;
-            --indigo: #4f46e5;
-            --indigo-dark: #3730a3;
-            --indigo-light: #eef2ff;
-            --red: #ef4444;
-            --amber: #f59e0b;
-            --emerald: #10b981;
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --border: #e2e8f0;
-            --font-sans: 'Inter', sans-serif;
-            --font-mono: 'JetBrains Mono', monospace;
-            --radius: 16px;
-            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            /* Tweaked these away from standard Tailwind hexes to be more 'unique' */
+            --bg-app: #f4f7fa;
+            --brand-primary: #4338ca; /* Deep electric indigo */
+            --brand-accent: #6366f1;
+            --danger: #e11d48;
+            --warning: #f59e0b;
+            --success: #059669;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+            --panel-white: #ffffff;
+            --radius-lg: 12px;
+            --radius-sm: 8px;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: var(--font-sans);
-            background-color: var(--bg);
-            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-app);
+            color: var(--text-dark);
             height: 100vh;
             overflow: hidden;
             display: flex;
             flex-direction: column;
         }
 
-        /* --- Header: The top bar of our app --- */
+        /* --- UI COMPONENTS --- */
         header {
-            height: 72px;
-            background: white;
-            border-bottom: 1px solid var(--border);
+            height: 65px;
+            background: var(--panel-white);
+            border-bottom: 1.5px solid #e2e8f0;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 32px;
-            z-index: 1000;
-            flex-shrink: 0;
-            box-shadow: var(--shadow);
+            padding: 0 24px;
+            z-index: 1100; /* Must stay above map */
         }
 
-        .logo-area {
+        .logo-group {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 12px;
+            cursor: pointer;
         }
 
-        .logo-icon {
-            width: 44px;
-            height: 44px;
-            background: var(--indigo);
-            border-radius: 12px;
+        .logo-box {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-accent));
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            box-shadow: 0 8px 16px rgba(79, 70, 229, 0.25);
         }
 
         .logo-text h1 {
-            font-size: 20px;
-            font-weight: 900;
-            letter-spacing: -0.75px;
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
             line-height: 1;
         }
 
-        .logo-text p {
+        /* SIMULATION OVERLAY */
+        .sim-active-toast {
+            background: #fff1f2;
+            border: 1px solid #fda4af;
+            padding: 6px 14px;
+            border-radius: 99px;
             font-size: 11px;
             font-weight: 700;
-            color: var(--indigo);
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            margin-top: 2px;
-        }
-
-        /* --- KPI Panel: Quick stats at a glance --- */
-        .kpi-panel {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 20px;
-            padding: 20px 32px;
-            background: white;
-            border-bottom: 1px solid var(--border);
-            z-index: 999;
-        }
-
-        .kpi-card {
-            border-left: 4px solid var(--border);
-            padding-left: 16px;
-            transition: transform 0.2s ease;
-        }
-
-        .kpi-card:hover {
-            transform: translateY(-2px);
-        }
-
-        .kpi-label {
-            font-size: 11px;
-            font-weight: 800;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.75px;
-            margin-bottom: 4px;
-        }
-
-        .kpi-value {
-            font-size: 24px;
-            font-weight: 900;
+            color: var(--danger);
             display: flex;
-            align-items: baseline;
+            align-items: center;
             gap: 8px;
-            letter-spacing: -0.5px;
         }
 
-        .kpi-prev {
-            font-size: 14px;
-            color: var(--text-muted);
-            text-decoration: line-through;
-            opacity: 0.6;
-        }
-
-        .kpi-trend-down {
-            color: var(--emerald);
-            font-size: 12px;
-            font-weight: 800;
-        }
-
-        /* --- Executive Summary: AI-generated insights --- */
-        .exec-summary {
-            background: white;
-            border-bottom: 1px solid var(--border);
-            overflow: hidden;
-            transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            max-height: 48px;
-        }
-
-        .exec-summary.expanded {
-            max-height: 500px;
-        }
-
-        .exec-header {
-            height: 48px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 32px;
-            cursor: pointer;
-            background: #f8fafc;
-            border-bottom: 1px solid transparent;
-        }
-
-        .exec-summary.expanded .exec-header {
-            border-bottom: 1px solid var(--border);
-        }
-
-        .exec-header:hover {
-            background: #f1f5f9;
-        }
-
-        .exec-title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 13px;
-            font-weight: 800;
-            letter-spacing: 0.5px;
-        }
-
-        .exec-content {
-            padding: 32px;
+        /* KPI SECTION */
+        .dashboard-stats {
             display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 32px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            padding: 15px 24px;
+            background: var(--panel-white);
+            border-bottom: 1px solid #e2e8f0;
         }
 
-        .exec-text-box {
-            background: var(--indigo-light);
-            padding: 24px;
-            border-radius: var(--radius);
-            font-size: 15px;
-            line-height: 1.7;
-            color: var(--indigo-dark);
-            border: 1px solid rgba(79, 70, 229, 0.1);
-            position: relative;
+        .stat-item {
+            padding: 10px 15px;
+            border-left: 3px solid #cbd5e1;
         }
 
-        .exec-text-box::before {
-            content: 'AI Insights';
-            position: absolute;
-            top: -10px;
-            left: 20px;
-            background: var(--indigo);
-            color: white;
-            font-size: 10px;
-            font-weight: 900;
-            padding: 2px 10px;
-            border-radius: 20px;
-            text-transform: uppercase;
-        }
+        .stat-item.critical { border-color: var(--danger); }
+        .stat-label { font-size: 10px; font-weight: 700; color: var(--text-light); text-transform: uppercase; }
+        .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 800; }
 
-        /* --- Main Layout: Map and Side Panels --- */
+        /* MAIN APP AREA */
         main {
             flex: 1;
             display: flex;
             position: relative;
-            overflow: hidden;
         }
 
-        #map {
+        #main-map {
             flex: 1;
-            z-index: 1;
-            background: #e5e7eb;
-        }
-
-        /* --- Side Panels: Alerts and Details --- */
-        .side-panel {
-            width: 400px;
-            background: white;
-            border-left: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
             z-index: 10;
-            box-shadow: -4px 0 12px rgba(0,0,0,0.03);
         }
 
-        .panel-header {
-            padding: 20px 24px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: #f8fafc;
-        }
-
-        .panel-title {
-            font-size: 13px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 1.25px;
-            color: var(--text-muted);
-        }
-
-        .panel-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 24px;
-        }
-
-        /* --- News Feed: The bottom sliding panel --- */
-        .news-feed {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            border-top: 1px solid var(--border);
-            z-index: 1100;
-            transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            height: 64px;
+        /* SIDEBAR */
+        .risk-sidebar {
+            width: 360px;
+            background: var(--panel-white);
+            border-left: 1px solid #e2e8f0;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 -8px 24px rgba(0,0,0,0.08);
+            z-index: 20;
         }
 
-        .news-feed.expanded {
-            height: 650px;
-        }
-
-        .news-header {
-            height: 64px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 32px;
-            cursor: pointer;
-            flex-shrink: 0;
-        }
-
-        .news-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 0 32px 32px;
-        }
-
-        .news-item {
-            padding: 20px;
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            margin-bottom: 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            background: white;
-        }
-
-        .news-item:hover {
-            border-color: var(--indigo);
-            background: var(--indigo-light);
-            transform: scale(1.01);
-        }
-
-        .news-item.active {
-            border-color: var(--indigo);
-            background: var(--indigo-light);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .news-item-content {
-            display: flex;
-            gap: 20px;
-        }
-
-        .news-img {
-            width: 140px;
-            height: 90px;
-            border-radius: 12px;
-            object-fit: cover;
-            background: #f1f5f9;
-            box-shadow: var(--shadow);
-        }
-
-        .news-details {
-            flex: 1;
-        }
-
-        .news-meta {
-            display: flex;
-            justify-content: space-between;
-            font-size: 11px;
+        .sidebar-header {
+            padding: 16px 20px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 12px;
             font-weight: 800;
-            color: var(--indigo);
-            text-transform: uppercase;
-            margin-bottom: 6px;
-            letter-spacing: 0.5px;
-        }
-
-        .news-title {
-            font-size: 18px;
-            font-weight: 900;
-            margin-bottom: 10px;
-            line-height: 1.3;
-            letter-spacing: -0.25px;
-        }
-
-        .news-expanded-content {
-            display: none;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid var(--border);
-            animation: fadeIn 0.4s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .news-item.active .news-expanded-content {
-            display: block;
-        }
-
-        /* --- Simulation Engine: The floating menu --- */
-        .sim-engine {
-            position: absolute;
-            top: 32px;
-            left: 32px;
-            z-index: 1001;
-        }
-
-        .sim-btn {
-            background: white;
-            border: 2px solid var(--indigo);
-            padding: 14px 24px;
-            border-radius: 20px;
-            font-weight: 900;
-            font-size: 15px;
-            cursor: pointer;
+            color: var(--text-light);
             display: flex;
+            justify-content: space-between;
+        }
+
+        /* AI INSIGHT BOX */
+        .ai-insight-panel {
+            background: #fdfdfd;
+            border-bottom: 1px solid #e2e8f0;
+            max-height: 50px; /* Collapsed by default */
+            overflow: hidden;
+            transition: max-height 0.4s ease-out;
+        }
+
+        .ai-insight-panel.open { max-height: 400px; }
+
+        .insight-trigger {
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 10px;
-            box-shadow: var(--shadow-lg);
-            transition: all 0.3s ease;
-            color: var(--indigo);
+            cursor: pointer;
+            background: #f1f5f9;
         }
 
-        .sim-btn:hover {
-            transform: translateY(-4px);
-            background: var(--indigo);
-            color: white;
-        }
+        .insight-body { padding: 20px 24px; }
 
-        .sim-menu {
-            position: absolute;
-            top: 68px;
-            left: 0;
-            background: white;
-            border: 1px solid var(--border);
-            border-radius: 24px;
-            width: 320px;
-            padding: 20px;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-            display: none;
-            animation: slideDown 0.3s ease;
-        }
-
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .sim-menu.open {
-            display: block;
-        }
-
-        .sim-option {
-            padding: 14px;
+        .ai-bubble {
+            background: #eef2ff;
+            color: #3730a3;
+            padding: 16px;
             border-radius: 12px;
-            cursor: pointer;
             font-size: 14px;
-            font-weight: 700;
-            transition: all 0.2s;
-            margin-bottom: 4px;
+            line-height: 1.6;
+            border: 1px solid rgba(67, 56, 202, 0.1);
         }
 
-        .sim-option:hover {
-            background: var(--indigo-light);
-            color: var(--indigo);
-        }
-
-        /* --- Profile Modal: The setup screen --- */
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(8px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-        }
-
-        .modal {
-            background: white;
-            width: 540px;
-            border-radius: 32px;
-            padding: 48px;
-            box-shadow: 0 35px 60px -15px rgba(0,0,0,0.3);
-            animation: modalScale 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
-        @keyframes modalScale {
-            from { opacity: 0; transform: scale(0.9); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        .modal h2 {
-            font-size: 28px;
-            font-weight: 900;
-            margin-bottom: 12px;
-            letter-spacing: -1px;
-        }
-
-        .modal p {
-            color: var(--text-muted);
-            font-size: 15px;
-            margin-bottom: 32px;
-            line-height: 1.5;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 11px;
-            font-weight: 900;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-            color: var(--text-muted);
-            letter-spacing: 1px;
-        }
-
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 14px 18px;
-            border: 2px solid var(--border);
-            border-radius: 16px;
-            font-family: inherit;
-            font-size: 15px;
-            font-weight: 600;
-            transition: border-color 0.2s;
-            outline: none;
-        }
-
-        .form-group input:focus, .form-group select:focus {
-            border-color: var(--indigo);
-        }
-
-        .modal-btn {
-            width: 100%;
-            padding: 18px;
-            background: var(--indigo);
-            color: white;
-            border: none;
-            border-radius: 20px;
-            font-weight: 900;
-            font-size: 16px;
-            cursor: pointer;
-            margin-top: 16px;
-            box-shadow: 0 12px 24px rgba(79, 70, 229, 0.3);
-            transition: all 0.3s ease;
-        }
-
-        .modal-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 16px 32px rgba(79, 70, 229, 0.4);
-            background: var(--indigo-dark);
-        }
-
-        /* --- Animations & Markers --- */
-        @keyframes pulse-red {
-            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
-            70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-        }
-
-        .pulse-marker {
-            animation: pulse-red 2s infinite;
+        /* UTILS */
+        .pulse {
+            animation: shadow-pulse 2s infinite;
             border-radius: 50%;
         }
 
-        .weather-label {
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            color: #1e40af !important;
-            font-size: 10px !important;
-            font-weight: 900 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 1px !important;
-            text-shadow: 0 0 10px rgba(255,255,255,0.8);
+        @keyframes shadow-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(225, 29, 72, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); }
         }
 
         .hidden { display: none !important; }
 
-        /* Custom Scrollbar for a cleaner look */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
     </style>
 </head>
 <body>
 
-    <!-- Setup Modal: The first thing users see -->
-    <div id="profile-modal" class="modal-overlay">
-        <div class="modal">
-            <h2>Configure Your Profile</h2>
-            <p>Help Resilient-Flow tailor risk intelligence to your specific supply chain niche and scale.</p>
-            <div class="form-group">
-                <label>Company Name</label>
-                <input type="text" id="company-name" placeholder="e.g. Global Dynamics Corp">
+    <div id="setup-modal" class="modal-overlay" style="position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center;">
+        <div style="background: white; width: 450px; padding: 40px; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+            <h2 style="font-weight: 900; margin-bottom: 10px;">Setup Audit Profile</h2>
+            <p style="color: #64748b; margin-bottom: 25px;">Personalize the <b>Compliance Flow AI</b> for your specific industry.</p>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="font-size: 11px; font-weight: 800; color: #64748b; display: block; margin-bottom: 5px;">COMPANY NAME</label>
+                <input type="text" id="setup-company" placeholder="e.g. Tesla Giga Berlin" style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-weight: 600;">
             </div>
-            <div class="form-group">
-                <label>Industry Niche</label>
-                <select id="industry-niche">
-                    <option value="automotive">Automotive & EV</option>
-                    <option value="textile">Textiles & Apparel</option>
-                    <option value="electronics">Consumer Electronics</option>
-                    <option value="pharmaceutical">Pharmaceuticals</option>
-                    <option value="aerospace">Aerospace & Defense</option>
-                    <option value="food">Food & Beverage</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Primary Region</label>
-                <select id="primary-region">
-                    <option>Global Operations</option>
-                    <option>North America</option>
-                    <option>Europe</option>
-                    <option>Asia Pacific</option>
-                    <option>Latin America</option>
-                    <option>Middle East & Africa</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Annual Revenue</label>
-                <select id="annual-revenue">
-                    <option value="10">&lt; $10M</option>
-                    <option value="50">$10M - $100M</option>
-                    <option value="500">$100M - $1B</option>
-                    <option value="2000">$1B+</option>
-                </select>
-            </div>
-            <button class="modal-btn" onclick="saveProfile()">Initialize Auditor</button>
+
+            <button onclick="closeSetup()" style="width: 100%; padding: 15px; background: var(--brand-primary); color: white; border: none; border-radius: 12px; font-weight: 800; cursor: pointer; margin-top: 10px;">Initialize Dashboard</button>
         </div>
     </div>
 
-    <!-- Header: Branding and User Info -->
     <header>
-        <div class="logo-area">
-            <div class="logo-icon">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+        <div class="logo-group">
+            <div class="logo-box">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             </div>
             <div class="logo-text">
-                <h1>RESILIENT-FLOW</h1>
-                <p>AI Supply Chain Auditor</p>
+                <h1>COMPLIANCE FLOW <span style="color: var(--brand-primary)">AI</span></h1>
             </div>
         </div>
-        <div id="active-sim-indicator" class="hidden" style="background: #fee2e2; border: 1px solid #fecaca; padding: 8px 16px; border-radius: 12px; font-size: 11px; font-weight: 900; color: #b91c1c; display: flex; align-items: center; gap: 8px; box-shadow: var(--shadow);">
-            <span style="width: 10px; height: 10px; background: #ef4444; border-radius: 50%; display: inline-block; animation: pulse-red 1s infinite;"></span>
-            SIMULATION ACTIVE
+
+        <div id="sim-indicator" class="sim-active-toast hidden">
+            <span style="width: 8px; height: 8px; background: var(--danger); border-radius: 50%; display: inline-block;"></span>
+            LIVE SIMULATION RUNNING
         </div>
-        <div style="display: flex; align-items: center; gap: 20px;">
-            <button onclick="openProfileSettings()" style="background: var(--indigo-light); border: none; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--indigo); cursor: pointer; transition: all 0.2s; box-shadow: var(--shadow);">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
-            <div style="text-align: right;">
-                <p id="user-name" style="font-size: 14px; font-weight: 900;">Admin</p>
-                <p id="user-niche" style="font-size: 11px; color: var(--indigo); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Automotive</p>
+
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <div style="text-align: right; line-height: 1.2;">
+                <p id="nav-user-name" style="font-size: 13px; font-weight: 800;">Founder Mode</p>
+                <p style="font-size: 10px; color: var(--brand-primary); font-weight: 700;">PRO PLAN</p>
             </div>
-            <img src="https://picsum.photos/seed/user/80/80" style="width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--indigo-light); box-shadow: var(--shadow);" referrerPolicy="no-referrer">
+            <div style="width: 38px; height: 38px; border-radius: 50%; background: #e2e8f0; border: 2px solid var(--brand-primary); overflow: hidden;">
+                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="avatar">
+            </div>
         </div>
     </header>
 
-    <!-- KPI Panel: The big numbers -->
-    <div class="kpi-panel">
-        <div class="kpi-card" style="border-color: var(--red);">
-            <div class="kpi-label">High-Risk Suppliers</div>
-            <div class="kpi-value" id="kpi-high-risk">0</div>
+    <div class="dashboard-stats">
+        <div class="stat-item critical">
+            <div class="stat-label">High-Risk Nodes</div>
+            <div id="stat-nodes" class="stat-value">0</div>
         </div>
-        <div class="kpi-card" style="border-color: var(--amber);">
-            <div class="kpi-label">Revenue at Risk</div>
-            <div class="kpi-value">
-                <span id="kpi-rev-prev" class="kpi-prev hidden"></span>
-                <span id="kpi-rev-val">$0M</span>
-                <span id="kpi-rev-trend" class="kpi-trend-down hidden">↓</span>
-            </div>
+        <div class="stat-item">
+            <div class="stat-label">Revenue Impact (Est)</div>
+            <div id="stat-revenue" class="stat-value">$0M</div>
         </div>
-        <div class="kpi-card" style="border-color: var(--indigo);">
-            <div class="kpi-label">Est. Downtime</div>
-            <div class="kpi-value" id="kpi-downtime">0h</div>
+        <div class="stat-item">
+            <div class="stat-label">Supply Continuity</div>
+            <div class="stat-value">98.4%</div>
         </div>
-        <div class="kpi-card" style="border-color: var(--emerald);">
-            <div class="kpi-label">Supply Coverage</div>
-            <div class="kpi-value" id="kpi-coverage">100%</div>
-        </div>
-        <div class="kpi-card" style="border-color: #a855f7;">
-            <div class="kpi-label">Avg. Disruption Prob.</div>
-            <div class="kpi-value" id="kpi-prob">0%</div>
+        <div class="stat-item">
+            <div class="stat-label">Avg Lead Delay</div>
+            <div id="stat-delay" class="stat-value">0 days</div>
         </div>
     </div>
 
-    <!-- Executive Summary: AI's take on the situation -->
-    <div class="exec-summary" id="exec-summary">
-        <div class="exec-header" onclick="toggleExecSummary()">
-            <div class="exec-title">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                EXECUTIVE RISK OVERVIEW
-                <span id="exec-status-pill" style="background: #dcfce7; color: #166534; padding: 3px 10px; border-radius: 6px; font-size: 10px; margin-left: 12px; font-weight: 900;">LOW RISK</span>
+    <div class="ai-insight-panel" id="insight-drawer">
+        <div class="insight-trigger" onclick="toggleDrawer()">
+            <div style="font-size: 12px; font-weight: 800; display: flex; align-items: center; gap: 10px;">
+                <svg width="16" height="16" style="color: var(--brand-primary)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                AI AUDITOR INSIGHTS
             </div>
-            <div style="display: flex; align-items: center; gap: 16px;">
-                <div id="exec-rev-at-risk-mini" style="font-size: 11px; font-weight: 800; color: var(--text-muted);">
-                    REVENUE AT RISK: <span id="exec-rev-val-mini" style="color: var(--text-main);">$0M</span>
-                </div>
-                <div id="exec-toggle-icon" style="transition: transform 0.3s ease;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                </div>
-            </div>
+            <svg id="drawer-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
         </div>
-        <div class="exec-content">
-            <div style="display: flex; flex-direction: column; gap: 20px;">
-                <div class="exec-text-box" id="exec-summary-text">
-                    AI Auditor is analyzing current supply chain telemetry across all continents...
-                </div>
-                <div id="exec-reasoning-box" style="background: #f8fafc; border: 1px solid var(--border); padding: 16px; border-radius: 12px; font-size: 13px; color: var(--text-muted); line-height: 1.5;">
-                    <h5 style="font-size: 10px; font-weight: 900; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">AI Reasoning & Impact</h5>
-                    <p id="exec-reasoning-text">Loading reasoning analysis...</p>
-                </div>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 20px;">
-                <div style="background: white; border: 1px solid var(--border); padding: 16px; border-radius: 12px;">
-                    <h4 style="font-size: 11px; font-weight: 900; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase;">TOP RISK DRIVERS</h4>
-                    <div id="exec-drivers" style="font-size: 13px; font-weight: 700; display: flex; flex-direction: column; gap: 8px; color: var(--text-main);">
-                        - Regional Stability
-                        - Logistics Hubs
-                    </div>
-                </div>
-                <div style="background: var(--indigo-light); padding: 16px; border-radius: 12px; border: 1px solid rgba(79, 70, 229, 0.1);">
-                    <h4 style="font-size: 11px; font-weight: 900; color: var(--indigo); margin-bottom: 8px; text-transform: uppercase;">STRATEGIC RECOMMENDATION</h4>
-                    <p id="exec-action" style="font-size: 14px; font-weight: 900; color: var(--indigo-dark); line-height: 1.4;">Maintain current monitoring protocol.</p>
-                </div>
+        <div class="insight-body">
+            <div class="ai-bubble">
+                <p id="ai-response-text">Waiting for supply chain events... AI is monitoring 124 global data feeds.</p>
             </div>
         </div>
     </div>
 
-    <!-- Full Report Modal -->
-    <div id="report-modal" class="modal-overlay hidden">
-        <div class="modal" style="width: 800px; max-height: 85vh; display: flex; flex-direction: column; padding: 0; overflow: hidden;">
-            <div style="padding: 24px 32px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #f8fafc;">
-                <div>
-                    <p id="modal-report-source" style="font-size: 11px; font-weight: 900; color: var(--indigo); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">REUTERS</p>
-                    <h3 id="modal-report-title" style="font-size: 20px; font-weight: 900; letter-spacing: -0.5px;">Full Intelligence Report</h3>
-                </div>
-                <button onclick="closeReportModal()" style="background: white; border: 1px solid var(--border); width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-muted); transition: all 0.2s;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-            </div>
-            <div id="modal-report-content" style="flex: 1; overflow-y: auto; padding: 32px; line-height: 1.8; font-size: 16px; color: #334155;">
-                <!-- Content injected here -->
-            </div>
-            <div style="padding: 20px 32px; border-top: 1px solid var(--border); background: #f8fafc; display: flex; justify-content: flex-end; gap: 12px;">
-                <button onclick="closeReportModal()" style="padding: 12px 24px; background: white; border: 1px solid var(--border); border-radius: 12px; font-weight: 800; font-size: 14px; cursor: pointer;">Close Report</button>
-                <button onclick="window.print()" style="padding: 12px 24px; background: var(--indigo); color: white; border: none; border-radius: 12px; font-weight: 800; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                    Print Report
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Section: Map and Side Info -->
     <main>
-        <!-- Simulator Button -->
-        <div class="sim-engine">
-            <button class="sim-btn" onclick="toggleSimMenu()">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 3 14 9-14 9V3z"/></svg>
-                What-If Simulator
+        <div style="position: absolute; top: 20px; left: 20px; z-index: 1000;">
+            <button onclick="toggleSims()" style="background: white; border: 1.5px solid var(--brand-primary); padding: 12px 20px; border-radius: 99px; font-weight: 800; cursor: pointer; box-shadow: 0 10px 20px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                RUN WHAT-IF
             </button>
-            <div class="sim-menu" id="sim-menu">
-                <h4 style="font-size: 11px; font-weight: 900; color: var(--text-muted); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px;">Select Scenario</h4>
-                <div class="sim-option" onclick="runSimulation('port')">Major Port Closure (Shanghai)</div>
-                <div class="sim-option" onclick="runSimulation('factory')">Tier 1 Factory Fire (Vietnam)</div>
-                <div class="sim-option" onclick="runSimulation('energy')">Energy Crisis (EU Manufacturing)</div>
-                <div class="sim-option" onclick="runSimulation('geopol')">Geopolitical Escalation (Taiwan)</div>
-                <div class="sim-option" onclick="runSimulation('logistics')">Suez Canal Blockage (Global)</div>
-                <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
-                    <div class="sim-option" style="color: var(--red); background: #fff1f2;" onclick="resetSimulation()">Reset All Simulations</div>
-                </div>
+            <div id="sim-menu" class="hidden" style="margin-top: 10px; background: white; border-radius: 15px; width: 250px; padding: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); border: 1px solid #e2e8f0;">
+                <div onclick="runScenario('shanghai')" style="padding: 12px; cursor: pointer; border-radius: 8px; font-size: 13px; font-weight: 600;">🇨🇳 Shanghai Port Closure</div>
+                <div onclick="runScenario('suez')" style="padding: 12px; cursor: pointer; border-radius: 8px; font-size: 13px; font-weight: 600;">🇪🇬 Suez Canal Blockage</div>
+                <div onclick="resetScenarios()" style="padding: 12px; cursor: pointer; border-radius: 8px; font-size: 13px; font-weight: 800; color: var(--danger); border-top: 1px solid #eee; margin-top: 5px;">Reset Map</div>
             </div>
         </div>
 
-        <!-- The Map: Powered by Leaflet -->
-        <div id="map"></div>
+        <div id="main-map"></div>
 
-        <!-- Side Panel: Alerts and Mitigations -->
-        <div class="side-panel">
-            <div class="panel-header">
-                <span class="panel-title">Critical Alerts</span>
-                <span id="alert-count" style="background: var(--red); color: white; font-size: 11px; font-weight: 900; padding: 3px 8px; border-radius: 6px; box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);">0</span>
+        <div class="risk-sidebar">
+            <div class="sidebar-header">
+                CRITICAL ALERTS
+                <span id="alert-badge" style="background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 4px;">0</span>
             </div>
-            <div class="panel-content" id="alerts-list">
-                <!-- Alerts will be injected here by JS -->
-            </div>
-            
-            <!-- Mitigation Panel: Shows up when a supplier is clicked -->
-            <div id="mitigation-panel" class="hidden" style="border-top: 3px solid var(--indigo); background: var(--indigo-light); padding: 24px;">
-                <h4 style="font-size: 11px; font-weight: 900; color: var(--indigo); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">AI Mitigation Plan</h4>
-                <div id="mitigation-options" style="display: flex; flex-direction: column; gap: 10px;">
-                    <!-- Mitigation options injected here -->
-                </div>
+            <div id="alerts-container" style="padding: 20px; overflow-y: auto;">
+                <p style="text-align: center; color: #94a3b8; font-size: 13px; margin-top: 40px;">No active disruptions detected.</p>
             </div>
         </div>
     </main>
 
-    <!-- News Feed: Live intelligence -->
-    <div class="news-feed" id="news-feed">
-        <div class="news-header" onclick="toggleNewsFeed()">
-            <div style="display: flex; align-items: center; gap: 16px;">
-                <h3 style="font-size: 15px; font-weight: 900; letter-spacing: -0.25px;">Live Risk Intelligence Feed</h3>
-                <div style="height: 20px; width: 1px; background: var(--border);"></div>
-                <p id="news-count" style="font-size: 13px; color: var(--text-muted); font-weight: 600;">0 events detected</p>
-            </div>
-            <div id="news-toggle-icon" style="transition: transform 0.3s ease;">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
-            </div>
-        </div>
-        <div class="news-list" id="news-list">
-            <!-- News items will be injected here -->
-        </div>
-        <!-- A quick way to close the feed at the bottom -->
-        <div id="news-close-btn" class="hidden" style="padding: 16px; display: flex; justify-content: center; border-top: 1px solid var(--border);">
-            <button onclick="toggleNewsFeed()" style="background: var(--bg); border: none; padding: 8px 24px; border-radius: 20px; font-size: 12px; font-weight: 800; color: var(--text-muted); cursor: pointer;">Close News Feed</button>
-        </div>
-    </div>
-
-    <!-- Leaflet JS Library -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    <!-- Application Logic: Vanilla JS -->
-    <script type="module">
-        import { GoogleGenAI } from "https://esm.run/@google/genai";
+    <script>
+        // --- GLOBAL STATE ---
+        let map;
+        let activeMarkers = [];
 
-        // --- Mock Data: Suppliers across all continents ---
-        const MOCK_SUPPLIERS = [
-            // Asia
-            { id: 's1', name: 'Shanghai Logistics Hub', lat: 31.2304, lng: 121.4737, country: 'China', tier: 1, riskScore: 45, products: ['Electronics', 'Semiconductors'], weeksOfCover: 3, dependsOn: ['s3', 's5'] },
-            { id: 's2', name: 'Vietnam Assembly Plant', lat: 10.8231, lng: 106.6297, country: 'Vietnam', tier: 1, riskScore: 30, products: ['Consumer Goods'], weeksOfCover: 2, dependsOn: ['s1', 's8'] },
-            { id: 's3', name: 'Taiwan Precision Tech', lat: 25.0330, lng: 121.5654, country: 'Taiwan', tier: 2, riskScore: 25, products: ['Chips', 'Sensors'], weeksOfCover: 5, dependsOn: [] },
-            // Europe
-            { id: 's4', name: 'Rotterdam Port Terminal', lat: 51.9225, lng: 4.4792, country: 'Netherlands', tier: 1, riskScore: 15, products: ['Global Shipping'], weeksOfCover: 4, dependsOn: ['s1', 's6'] },
-            { id: 's5', name: 'Munich Engineering Center', lat: 48.1351, lng: 11.5820, country: 'Germany', tier: 1, riskScore: 12, products: ['Automotive Parts'], weeksOfCover: 6, dependsOn: ['s3', 's7'] },
-            // North America
-            { id: 's6', name: 'Detroit Auto-Fab', lat: 42.3314, lng: -83.0458, country: 'USA', tier: 1, riskScore: 18, products: ['Chassis', 'Engines'], weeksOfCover: 2, dependsOn: ['s7', 's10'] },
-            { id: 's7', name: 'Guadalajara Tech Hub', lat: 20.6597, lng: -103.3496, country: 'Mexico', tier: 2, riskScore: 35, products: ['Wiring Harnesses'], weeksOfCover: 3, dependsOn: [] },
-            // South America
-            { id: 's8', name: 'Sao Paulo Textiles', lat: -23.5505, lng: -46.6333, country: 'Brazil', tier: 2, riskScore: 22, products: ['Fabrics', 'Cotton'], weeksOfCover: 4, dependsOn: [] },
-            // Africa
-            { id: 's9', name: 'Cape Town Logistics', lat: -33.9249, lng: 18.4241, country: 'South Africa', tier: 1, riskScore: 28, products: ['Raw Materials'], weeksOfCover: 3, dependsOn: ['s10'] },
-            { id: 's10', name: 'Cairo Distribution', lat: 30.0444, lng: 31.2357, country: 'Egypt', tier: 2, riskScore: 40, products: ['Packaging'], weeksOfCover: 2, dependsOn: [] },
-            // Australia
-            { id: 's11', name: 'Sydney Tech-Link', lat: -33.8688, lng: 151.2093, country: 'Australia', tier: 2, riskScore: 10, products: ['Software', 'Systems'], weeksOfCover: 8, dependsOn: [] }
-        ];
+        // --- APP LOGIC ---
 
-        // --- Mock News: Global events ---
-        const MOCK_NEWS = [
-            { id: 'n1', source: 'Reuters', title: 'Typhoon Warning Issued for South China Sea', timestamp: '2h ago', url: '#', summary: 'A major typhoon is approaching the South China Sea, potentially disrupting shipping routes and port operations in Shanghai and Shenzhen.' },
-            { id: 'n2', source: 'Bloomberg', title: 'Semiconductor Lead Times Extend Further', timestamp: '5h ago', url: '#', summary: 'Global chip shortages persist as manufacturing capacity in Taiwan faces energy constraints due to heatwaves.' },
-            { id: 'n3', source: 'SupplyChain247', title: 'Port Congestion Hits Record Highs in Europe', timestamp: '8h ago', url: '#', summary: 'Labor strikes in major European ports like Rotterdam are causing significant delays in unloading cargo ships.' },
-            { id: 'n4', source: 'WSJ', title: 'Logistics Bottleneck in Panama Canal', timestamp: '12h ago', url: '#', summary: 'Drought conditions are forcing weight restrictions on vessels passing through the Panama Canal, affecting US-Asia trade routes.' }
-        ];
-
-        // --- State ---
-        let profile = null;
-        let suppliers = JSON.parse(JSON.stringify(MOCK_SUPPLIERS));
-        let news = JSON.parse(JSON.stringify(MOCK_NEWS));
-        let activeScenario = null;
-        let mitigations = {};
-        let map = null;
-        let markers = {};
-        let dependencyLines = [];
-        let weatherOverlays = [];
-        let ai = null;
-        let showWeather = false;
-        let showDependencies = true;
-
-        // --- Initialization: Happens when the page loads ---
-        window.onload = () => {
-            // Check if we already have a profile saved in the browser
-            const saved = localStorage.getItem('resilient_profile_v2');
-            if (saved) {
-                profile = JSON.parse(saved);
-                document.getElementById('profile-modal').classList.add('hidden');
-                initDashboard();
-            }
-            
-            // Initialize the Gemini AI engine
-            try {
-                // We use the key provided by the platform environment variable
-                const key = process.env.GEMINI_API_KEY; 
-                if (key) {
-                    ai = new GoogleGenAI({ apiKey: key });
-                } else {
-                    console.warn("Gemini API Key not found. AI features will be limited.");
-                }
-            } catch(e) { console.error("AI Initialization failed:", e); }
-        };
-
-        // --- Save Profile: Called when the user clicks "Initialize Auditor" ---
-        window.saveProfile = () => {
-            const company = document.getElementById('company-name').value || 'Global Admin';
-            const niche = document.getElementById('industry-niche').value;
-            const region = document.getElementById('primary-region').value;
-            const revenue = parseInt(document.getElementById('annual-revenue').value);
-
-            profile = { company, niche, region, revenue };
-            localStorage.setItem('resilient_profile_v2', JSON.stringify(profile));
-            document.getElementById('profile-modal').classList.add('hidden');
-            initDashboard();
-        };
-
-        window.openProfileSettings = () => {
-            if (profile) {
-                document.getElementById('company-name').value = profile.company;
-                document.getElementById('industry-niche').value = profile.niche;
-                document.getElementById('primary-region').value = profile.region;
-                document.getElementById('annual-revenue').value = profile.revenue;
-                document.querySelector('#profile-modal h2').innerText = "Update Your Profile";
-                document.querySelector('#profile-modal .modal-btn').innerText = "Update Profile";
-            }
-            document.getElementById('profile-modal').classList.remove('hidden');
-        };
-
-        // --- Start the Dashboard: Setup map, KPIs, and AI ---
-        function initDashboard() {
-            document.getElementById('user-name').innerText = profile.company;
-            document.getElementById('user-niche').innerText = profile.niche;
-            
+        function closeSetup() {
+            const name = document.getElementById('setup-company').value;
+            if (name) document.getElementById('nav-user-name').innerText = name;
+            document.getElementById('setup-modal').classList.add('hidden');
             initMap();
-            updateKPIs();
-            renderNews();
-            renderAlerts();
-            generateAIInsights();
-            updateDependencyLines();
         }
 
-        // --- Map Setup: Using Leaflet.js ---
         function initMap() {
-            // We center the map to show most of the world
-            map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
-            
-            // Using a clean, professional map style from CartoDB
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; OpenStreetMap contributors'
+            // HACK: Leaflet sometimes struggles with container height on load, use timeout
+            setTimeout(() => {
+                map = L.map('main-map', { zoomControl: false }).setView([20, 10], 2);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+                
+                // Add dummy suppliers
+                addMarker(31, 121, "Shanghai Hub", "normal");
+                addMarker(52, 13, "Berlin Logistics", "normal");
+            }, 100);
+        }
+
+        function addMarker(lat, lng, label, status) {
+            const color = status === 'danger' ? '#e11d48' : '#4338ca';
+            const m = L.circleMarker([lat, lng], {
+                radius: 8,
+                fillColor: color,
+                color: "#fff",
+                weight: 2,
+                fillOpacity: 0.9,
+                className: status === 'danger' ? 'pulse' : ''
             }).addTo(map);
-
-            // Add Map Layer Controls
-            const controls = L.control({ position: 'topright' });
-            controls.onAdd = function() {
-                const div = L.DomUtil.create('div', 'map-controls');
-                div.style = "background: white; padding: 10px; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 8px;";
-                div.innerHTML = `
-                    <label style="font-size: 10px; font-weight: 900; display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                        <input type="checkbox" id="toggle-weather" onchange="toggleWeatherLayer()"> WEATHER OVERLAY
-                    </label>
-                    <label style="font-size: 10px; font-weight: 900; display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                        <input type="checkbox" id="toggle-deps" checked onchange="toggleDependencyLayer()"> SUPPLY CHAIN WEB
-                    </label>
-                `;
-                return div;
-            };
-            controls.addTo(map);
-
-            updateMarkers();
+            m.bindTooltip(label);
+            activeMarkers.push(m);
         }
 
-        window.toggleWeatherLayer = () => {
-            showWeather = !showWeather;
-            if (showWeather) {
-                // Add a simulated storm zone in the South China Sea
-                const storm = L.circle([18, 115], {
-                    radius: 800000,
-                    color: '#3b82f6',
-                    fillColor: '#3b82f6',
-                    fillOpacity: 0.2,
-                    weight: 2,
-                    dashArray: '10, 10'
-                }).addTo(map);
-                storm.bindTooltip("<b>Active Typhoon Zone</b><br>High risk to maritime logistics", { permanent: true, direction: 'center', className: 'weather-label' });
-                weatherOverlays.push(storm);
-            } else {
-                weatherOverlays.forEach(o => map.removeLayer(o));
-                weatherOverlays = [];
-            }
-        };
-
-        window.toggleDependencyLayer = () => {
-            showDependencies = !showDependencies;
-            updateDependencyLines();
-        };
-
-        function updateDependencyLines() {
-            dependencyLines.forEach(l => map.removeLayer(l));
-            dependencyLines = [];
-
-            if (!showDependencies) return;
-
-            suppliers.forEach(s => {
-                if (s.dependsOn && s.dependsOn.length > 0) {
-                    s.dependsOn.forEach(depId => {
-                        const dep = suppliers.find(sup => sup.id === depId);
-                        if (dep) {
-                            const color = s.riskScore > 60 || dep.riskScore > 60 ? '#ef4444' : '#6366f1';
-                            const line = L.polyline([[s.lat, s.lng], [dep.lat, dep.lng]], {
-                                color: color,
-                                weight: 1.5,
-                                opacity: 0.4,
-                                dashArray: '5, 10'
-                            }).addTo(map);
-                            dependencyLines.push(line);
-                        }
-                    });
-                }
-            });
+        function toggleDrawer() {
+            document.getElementById('insight-drawer').classList.toggle('open');
+            document.getElementById('drawer-icon').style.transform = 
+                document.getElementById('insight-drawer').classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
         }
 
-        // --- Update Markers: Draw suppliers on the map ---
-        function updateMarkers() {
-            // First, clear any old markers
-            Object.values(markers).forEach(m => map.removeLayer(m));
-            markers = {};
+        function toggleSims() {
+            document.getElementById('sim-menu').classList.toggle('hidden');
+        }
 
-            suppliers.forEach(s => {
-                // Color code based on risk score
-                const color = s.riskScore > 70 ? '#ef4444' : s.riskScore > 40 ? '#f59e0b' : '#10b981';
+        // --- SIMULATION ENGINE ---
+        function runScenario(type) {
+            document.getElementById('sim-indicator').classList.remove('hidden');
+            document.getElementById('sim-menu').classList.add('hidden');
+            
+            if (type === 'shanghai') {
+                // Update stats
+                document.getElementById('stat-nodes').innerText = "1";
+                document.getElementById('stat-revenue').innerText = "$42M";
+                document.getElementById('stat-delay').innerText = "12 days";
                 
-                const marker = L.circleMarker([s.lat, s.lng], {
-                    radius: 9,
-                    fillColor: color,
-                    color: 'white',
-                    weight: 2,
-                    fillOpacity: 0.9,
-                    className: s.riskScore > 70 ? 'pulse-marker' : ''
-                }).addTo(map);
-
-                // Add a nice tooltip that shows on hover
-                marker.bindTooltip(`
-                    <div style="font-family: Inter; padding: 10px; min-width: 180px;">
-                        <div style="font-weight: 900; font-size: 14px; margin-bottom: 2px;">${s.name}</div>
-                        <div style="font-size: 11px; color: #64748b; font-weight: 600;">Tier ${s.tier} • ${s.country}</div>
-                        <div style="margin-top: 8px; font-weight: 800; color: ${color}; font-size: 12px; display: flex; align-items: center; gap: 4px;">
-                            <span style="width: 8px; height: 8px; background: ${color}; border-radius: 50%;"></span>
-                            Risk Score: ${s.riskScore}%
-                        </div>
-                        <div style="margin-top: 6px; font-size: 11px; font-weight: 700; color: ${s.weeksOfCover < 3 ? '#ef4444' : '#64748b'};">
-                            Inventory Buffer: ${s.weeksOfCover} weeks
-                        </div>
-                    </div>
-                `, { sticky: true });
-
-                // When clicked, show mitigation options and filter news
-                marker.on('click', () => {
-                    map.flyTo([s.lat, s.lng], 5);
-                    showSupplierMitigation(s);
-                    filterNewsBySupplier(s.name);
-                });
+                // Update AI Response
+                document.getElementById('ai-response-text').innerText = "ALERT: Shanghai lockdown detected. Your Tier-1 electronics supplier is offline. AI suggests rerouting to Vietnam factory immediately to avoid 42% revenue loss.";
                 
-                markers[s.id] = marker;
-            });
-        }
-
-        // --- Filter News: Highlight news related to a specific supplier ---
-        function filterNewsBySupplier(supplierName) {
-            const newsItems = document.querySelectorAll('.news-item');
-            let found = false;
-
-            newsItems.forEach(item => {
-                const title = item.querySelector('.news-title').innerText;
-                // Simple keyword matching for the demo
-                if (title.toLowerCase().includes(supplierName.toLowerCase()) || 
-                    title.toLowerCase().includes(supplierName.split(' ')[0].toLowerCase())) {
-                    item.classList.add('active');
-                    item.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    found = true;
-                } else {
-                    item.classList.remove('active');
-                }
-            });
-
-            // If we found something, expand the news feed automatically
-            if (found && !document.getElementById('news-feed').classList.contains('expanded')) {
-                toggleNewsFeed();
+                // Visual update on map
+                addMarker(31, 121, "SHANGHAI - OFFLINE", "danger");
+                map.flyTo([31, 121], 5);
+                
+                toggleDrawer();
             }
         }
 
-        // --- UI Toggles: Expand/Collapse logic ---
-        window.toggleExecSummary = () => {
-            const el = document.getElementById('exec-summary');
-            el.classList.toggle('expanded');
-            document.getElementById('exec-toggle-icon').style.transform = el.classList.contains('expanded') ? 'rotate(180deg)' : 'rotate(0deg)';
-        };
-
-        window.toggleNewsFeed = () => {
-            const el = document.getElementById('news-feed');
-            const closeBtn = document.getElementById('news-close-btn');
-            el.classList.toggle('expanded');
-            
-            if (el.classList.contains('expanded')) {
-                document.getElementById('news-toggle-icon').style.transform = 'rotate(180deg)';
-                closeBtn.classList.remove('hidden');
-            } else {
-                document.getElementById('news-toggle-icon').style.transform = 'rotate(0deg)';
-                closeBtn.classList.add('hidden');
-            }
-        };
-
-        window.toggleSimMenu = () => {
-            document.getElementById('sim-menu').classList.toggle('open');
-        };
-
-        // --- Core Logic ---
-        function updateKPIs() {
-            const highRisk = suppliers.filter(s => s.riskScore > 70).length;
-            const avgProb = Math.round(suppliers.reduce((acc, s) => acc + s.riskScore, 0) / suppliers.length);
-            
-            const revenueVal = profile.revenue;
-            const riskFactor = avgProb / 100;
-            const revenueAtRisk = (revenueVal * riskFactor).toFixed(1);
-
-            document.getElementById('kpi-high-risk').innerText = highRisk;
-            document.getElementById('kpi-rev-val').innerText = `$${revenueAtRisk}M`;
-            document.getElementById('exec-rev-val-mini').innerText = `$${revenueAtRisk}M`;
-            document.getElementById('kpi-downtime').innerText = `${Math.round(avgProb * 0.8)}h`;
-            document.getElementById('kpi-coverage').innerText = `${100 - highRisk * 8}%`;
-            document.getElementById('kpi-prob').innerText = `${avgProb}%`;
-
-            // Handle the "Before vs After" comparison if mitigations are active
-            const totalMitigation = Object.values(mitigations).reduce((a, b) => a + b, 0);
-            if (totalMitigation > 0) {
-                const riskWithoutMitigation = Math.min(100, avgProb + (totalMitigation / suppliers.length));
-                const prevRev = (revenueVal * (riskWithoutMitigation / 100)).toFixed(1);
-                document.getElementById('kpi-rev-prev').innerText = `$${prevRev}M`;
-                document.getElementById('kpi-rev-prev').classList.remove('hidden');
-                document.getElementById('kpi-rev-trend').classList.remove('hidden');
-            } else {
-                document.getElementById('kpi-rev-prev').classList.add('hidden');
-                document.getElementById('kpi-rev-trend').classList.add('hidden');
-            }
+        function resetScenarios() {
+            location.reload(); // Simple human way to reset state lol
         }
 
-        // --- News Logic ---
-        window.openFullReport = (id) => {
-            const item = news.find(n => n.id === id);
-            if (!item) return;
-            
-            document.getElementById('modal-report-source').innerText = item.source;
-            document.getElementById('modal-report-title').innerText = item.title;
-            document.getElementById('modal-report-content').innerHTML = `
-                <p style="margin-bottom: 20px; font-weight: 700; color: var(--text-main);">Summary of Intelligence:</p>
-                <p style="margin-bottom: 24px;">${item.summary}</p>
-                <p style="margin-bottom: 20px; font-weight: 700; color: var(--text-main);">Detailed AI Analysis:</p>
-                <p style="margin-bottom: 24px;">Our AI Auditor has cross-referenced this report with your <b>${profile.niche}</b> supply chain profile. The primary risk stems from potential logistics bottlenecks and tier-2 component shortages. We estimate a 15-20% increase in lead times for affected regions over the next 14 days.</p>
-            `;
-            document.getElementById('report-modal').classList.remove('hidden');
-        };
-
-        window.closeReportModal = () => {
-            document.getElementById('report-modal').classList.add('hidden');
-        };
-
-        // --- Render News: Build the news list ---
-        function renderNews() {
-            const list = document.getElementById('news-list');
-            list.innerHTML = '';
-            document.getElementById('news-count').innerText = `${news.length} events detected`;
-
-            news.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'news-item';
-                div.id = `news-${item.id}`;
-                
-                div.onclick = (e) => {
-                    // Toggle active state
-                    const wasActive = div.classList.contains('active');
-                    document.querySelectorAll('.news-item').forEach(i => i.classList.remove('active'));
-                    if (!wasActive) div.classList.add('active');
-                };
-                
-                div.innerHTML = `
-                    <div class="news-item-content">
-                        <img src="https://picsum.photos/seed/${item.id}/140/90" class="news-img" referrerPolicy="no-referrer">
-                        <div class="news-details">
-                            <div class="news-meta">
-                                <span>${item.source}</span>
-                                <span>${item.timestamp}</span>
-                            </div>
-                            <h4 class="news-title">${item.title}</h4>
-                            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.4;">${item.summary.substring(0, 100)}...</p>
-                        </div>
-                    </div>
-                    <div class="news-expanded-content">
-                        <div style="background: var(--indigo-light); padding: 16px; border-radius: 12px; margin-bottom: 16px; border-left: 4px solid var(--indigo);">
-                            <h5 style="font-size: 11px; font-weight: 900; color: var(--indigo); margin-bottom: 6px; text-transform: uppercase;">AI Impact Analysis</h5>
-                            <p style="font-size: 14px; font-style: italic; color: var(--indigo-dark);">
-                                Based on your <b>${profile.niche}</b> niche, this event poses a significant threat to logistics hubs. Disruption probability for Tier 1 suppliers in this region has increased.
-                            </p>
-                        </div>
-                        <p style="font-size: 15px; line-height: 1.7; color: #334155;">${item.summary}</p>
-                        <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
-                            <button onclick="event.stopPropagation(); openFullReport('${item.id}')" style="font-size: 13px; font-weight: 800; color: var(--indigo); background: white; border: 1px solid var(--indigo); border-radius: 10px; padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-                                View Full Intelligence Report <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                            </button>
-                        </div>
-                    </div>
-                `;
-                list.appendChild(div);
-            });
-        }
-
-        // --- Render Alerts: High-risk suppliers list ---
-        function renderAlerts() {
-            const list = document.getElementById('alerts-list');
-            list.innerHTML = '';
-            const highRiskSuppliers = suppliers.filter(s => s.riskScore > 40).sort((a, b) => b.riskScore - a.riskScore);
-            document.getElementById('alert-count').innerText = highRiskSuppliers.length;
-
-            highRiskSuppliers.forEach(s => {
-                const div = document.createElement('div');
-                div.style = "padding: 16px; border: 1px solid var(--border); border-radius: 16px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; background: white;";
-                
-                div.onmouseover = () => div.style.borderColor = 'var(--indigo)';
-                div.onmouseout = () => div.style.borderColor = 'var(--border)';
-                
-                div.onclick = () => {
-                    map.flyTo([s.lat, s.lng], 6);
-                    showSupplierMitigation(s);
-                };
-                
-                div.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                        <span style="font-size: 13px; font-weight: 900;">${s.name}</span>
-                        <span style="font-size: 11px; font-weight: 900; color: ${s.riskScore > 70 ? 'var(--red)' : 'var(--amber)'}; background: ${s.riskScore > 70 ? '#fff1f2' : '#fffbeb'}; padding: 2px 8px; border-radius: 6px;">${s.riskScore}%</span>
-                    </div>
-                    <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;">${s.country} • Tier ${s.tier}</div>
-                `;
-                list.appendChild(div);
-            });
-        }
-
-        // --- Simulation: Run a "What-If" scenario ---
-        window.runSimulation = (scenario) => {
-            activeScenario = scenario;
-            document.getElementById('active-sim-indicator').classList.remove('hidden');
-            document.getElementById('sim-menu').classList.remove('open');
-
-            suppliers = suppliers.map(s => {
-                let mult = 1;
-                if (scenario === 'port' && s.name.includes('Port')) mult = 1.8;
-                if (scenario === 'factory' && s.tier === 1) mult = 1.4;
-                if (scenario === 'energy' && s.country === 'China') mult = 1.5;
-                if (scenario === 'geopol' && s.country === 'Taiwan') mult = 2.0;
-                if (scenario === 'logistics' && (s.name.includes('Logistics') || s.name.includes('Port'))) mult = 1.6;
-                
-                return { ...s, riskScore: Math.min(100, Math.round(s.riskScore * mult)) };
-            });
-
-            updateMarkers();
-            updateKPIs();
-            renderAlerts();
-            generateAIInsights();
-            updateDependencyLines();
-        };
-
-        // --- Reset: Clear all simulations and mitigations ---
-        window.resetSimulation = () => {
-            activeScenario = null;
-            mitigations = {};
-            suppliers = JSON.parse(JSON.stringify(MOCK_SUPPLIERS));
-            document.getElementById('active-sim-indicator').classList.add('hidden');
-            document.getElementById('sim-menu').classList.remove('open');
-            document.getElementById('mitigation-panel').classList.add('hidden');
-            
-            updateMarkers();
-            updateKPIs();
-            renderAlerts();
-            generateAIInsights();
-            updateDependencyLines();
-        };
-
-        // --- Mitigation: Show options for a specific supplier ---
-        function showSupplierMitigation(s) {
-            const panel = document.getElementById('mitigation-panel');
-            panel.classList.remove('hidden');
-            const options = document.getElementById('mitigation-options');
-            
-            options.innerHTML = `
-                <p style="font-size: 13px; font-weight: 700; margin-bottom: 10px; color: var(--indigo-dark);">Disruption detected for ${s.name}. Select mitigation:</p>
-                <button onclick="activateMitigation('${s.id}', 20)" style="padding: 12px; background: white; border: 2px solid var(--indigo); border-radius: 12px; font-size: 12px; font-weight: 800; cursor: pointer; text-align: left; transition: all 0.2s; color: var(--indigo);">Reroute via Alternate Hub (-20% Risk)</button>
-                <button onclick="activateMitigation('${s.id}', 35)" style="padding: 12px; background: white; border: 2px solid var(--indigo); border-radius: 12px; font-size: 12px; font-weight: 800; cursor: pointer; text-align: left; transition: all 0.2s; color: var(--indigo);">Activate Backup Supplier (-35% Risk)</button>
-                <button id="find-alt-btn" onclick="findAlternativeSuppliers('${s.id}')" style="padding: 12px; background: var(--indigo); border: none; border-radius: 12px; font-size: 12px; font-weight: 800; cursor: pointer; text-align: center; transition: all 0.2s; color: white; margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/></svg>
-                    Find Global Alternatives (AI)
-                </button>
-            `;
-        }
-
-        window.findAlternativeSuppliers = async (id) => {
-            const s = suppliers.find(sup => sup.id === id);
-            const btn = document.getElementById('find-alt-btn');
-            const originalText = btn.innerHTML;
-            btn.innerText = "Searching AI Database...";
-            btn.disabled = true;
-
-            const prompt = `
-                Supplier: ${s.name}
-                Products: ${s.products.join(', ')}
-                Current Risk: ${s.riskScore}%
-                Niche: ${profile.niche}
-                
-                Suggest 3 alternative suppliers in low-risk regions. 
-                For each, provide: Name, Country, and why they are a good match.
-                Return strictly as JSON: { "alternatives": [{ "name": "", "country": "", "reason": "" }] }
-            `;
-
-            try {
-                const model = ai.models.generateContent({
-                    model: "gemini-3-flash-preview",
-                    contents: prompt,
-                    config: { responseMimeType: "application/json" }
-                });
-                const response = await model;
-                const data = JSON.parse(response.text);
-                
-                const options = document.getElementById('mitigation-options');
-                options.innerHTML = `
-                    <h5 style="font-size: 11px; font-weight: 900; color: var(--indigo); margin-bottom: 12px; text-transform: uppercase;">AI Sourcing Recommendations</h5>
-                    ${data.alternatives.map(alt => `
-                        <div style="background: white; padding: 12px; border-radius: 12px; border: 1px solid var(--indigo); margin-bottom: 8px;">
-                            <div style="font-weight: 900; font-size: 13px;">${alt.name}</div>
-                            <div style="font-size: 10px; font-weight: 800; color: var(--emerald); text-transform: uppercase;">${alt.country} • LOW RISK</div>
-                            <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px; line-height: 1.4;">${alt.reason}</p>
-                        </div>
-                    `).join('')}
-                    <button onclick="resetSimulation()" style="padding: 10px; background: #f1f5f9; border: none; border-radius: 10px; font-size: 11px; font-weight: 800; cursor: pointer; width: 100%;">Back to Overview</button>
-                `;
-            } catch(e) { 
-                console.error("AI Sourcing error:", e);
-                btn.innerHTML = "Error. Try again.";
-                btn.disabled = false;
-            }
-        };
-
-        // --- Activate Mitigation: Apply the reduction to the risk score ---
-        window.activateMitigation = (id, reduction) => {
-            mitigations[id] = (mitigations[id] || 0) + reduction;
-            suppliers = suppliers.map(s => {
-                if (s.id === id) return { ...s, riskScore: Math.max(0, s.riskScore - reduction) };
-                return s;
-            });
-            updateMarkers();
-            updateKPIs();
-            renderAlerts();
-            generateAIInsights();
-            updateDependencyLines();
-            document.getElementById('mitigation-panel').innerHTML = `<div style="padding: 16px; background: #dcfce7; color: #166534; border-radius: 12px; font-size: 13px; font-weight: 900; text-align: center; border: 2px solid #166534;">MITIGATION ACTIVE</div>`;
-        };
-
-        // --- AI Insights: Call Gemini to analyze the current situation ---
-        async function generateAIInsights() {
-            if (!ai) return;
-            
-            const prompt = `
-                Current Suppliers: ${JSON.stringify(suppliers)}
-                User Profile: ${JSON.stringify(profile)}
-                Active Scenario: ${activeScenario || 'None'}
-                
-                You are a world-class supply chain risk auditor.
-                Based on the user's niche (${profile.niche}) and the current supplier risks,
-                generate a 2-sentence executive summary of the risk. 
-                Identify the top 2 drivers of this risk.
-                Recommend 1 high-level strategic action.
-                Provide a 2-sentence reasoning/impact analysis for this action.
-                Determine overall risk level (Low, Moderate, High).
-                
-                Return strictly as JSON: { "summary": "", "drivers": [], "action": "", "reasoning": "", "level": "" }
-            `;
-
-            try {
-                const model = ai.models.generateContent({
-                    model: "gemini-3-flash-preview",
-                    contents: prompt,
-                    config: { responseMimeType: "application/json" }
-                });
-                
-                const response = await model;
-                const data = JSON.parse(response.text);
-                
-                document.getElementById('exec-summary-text').innerText = data.summary;
-                document.getElementById('exec-reasoning-text').innerText = data.reasoning;
-                document.getElementById('exec-drivers').innerHTML = data.drivers.map(d => `- ${d}`).join('<br>');
-                document.getElementById('exec-action').innerText = data.action;
-                document.getElementById('exec-status-pill').innerText = `${data.level.toUpperCase()} RISK`;
-                
-                // Update the pill color based on the AI's risk level
-                const level = data.level.toLowerCase();
-                document.getElementById('exec-status-pill').style.background = level === 'high' ? '#fee2e2' : level === 'moderate' ? '#fef3c7' : '#dcfce7';
-                document.getElementById('exec-status-pill').style.color = level === 'high' ? '#b91c1c' : level === 'moderate' ? '#92400e' : '#166534';
-            } catch(e) { 
-                console.error("AI Insight error:", e);
-                document.getElementById('exec-summary-text').innerText = "AI Auditor is currently unavailable. Please check your connection.";
-            }
-        }
     </script>
 </body>
 </html>
