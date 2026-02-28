@@ -1,13 +1,13 @@
-# Run and deploy your Studio app
+# Run Your app
 
-This contains everything you need to run your app locally.
+This project contains everything you need to run the app locally.
 
-## Run Locally
+## 🚀 Run Locally
 
-**Prerequisites:** Node.js
+### Prerequisites
+- Node.js (v18 or later recommended)
+- npm (comes with Node.js)
 
-1. Install dependencies:  
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:  
-   `npm run dev`
+### 1️⃣ Install Dependencies
+```bash
+npm install
