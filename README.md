@@ -1,4 +1,4 @@
-# 🚀 Project Name
+# 🚀 Ressilence flow ai
 
 <div align="center">
   <img width="1200" height="475" alt="App Banner" src="./public/banner.png" />
