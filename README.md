@@ -1,7 +1,7 @@
 # 🚀 Ressilence flow ai
 
 <div align="center">
-  <img width="1200" height="475" alt="App Banner" src="./public/banner.png" />
+  <img width="1200" height="475" alt="App Banner" src="https://images.pexels.com/photos/8566521/pexels-photo-8566521.jpeg" />
 </div>
 
 ## 📖 Overview
