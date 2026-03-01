@@ -1,20 +1,73 @@
+# 🚀 Project Name
+
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+  <img width="1200" height="475" alt="App Banner" src="./public/banner.png" />
 </div>
 
-# Run and deploy your AI Studio app
+## 📖 Overview
 
-This contains everything you need to run your app locally.
+This project contains everything you need to run the application locally.
 
-View your app in AI Studio: https://ai.studio/apps/9d493c1a-07ec-48ea-bf36-3d920ca846d9
+---
 
-## Run Locally
+## ✅ Prerequisites
 
-**Prerequisites:**  Node.js
+Make sure you have the following installed:
 
+- Node.js (v16 or higher recommended)
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+Check your Node.js version:
+
+```bash
+node -v
+```
+
+---
+
+## 📦 Installation
+
+Install dependencies from the project root:
+
+```bash
+npm install
+```
+
+---
+
+## 🔐 Environment Setup
+
+Create a `.env.local` file in the root directory and add:
+
+```env
+GEMINI_API_KEY=your_api_key_here
+```
+
+Replace `your_api_key_here` with your actual API key.
+
+---
+
+## ▶️ Run the App
+
+Start the development server:
+
+```bash
+npm run dev
+```
+
+Then open your browser and visit:
+
+```
+http://localhost:3000
+```
+
+---
+
+## 🛠 Troubleshooting
+
+- Ensure Node.js is installed
+- Confirm `.env.local` exists and contains your API key
+- If needed, delete `node_modules` and run `npm install` again
+
+---
+
+You're all set.
